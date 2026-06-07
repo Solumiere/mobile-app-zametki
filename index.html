@@ -168,6 +168,35 @@ textarea{min-height:90px;resize:vertical;}
 .sheet h3{font-size:19px;font-weight:680;margin-bottom:18px;}
 .toast{position:fixed;bottom:108px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:560;padding:11px 18px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;z-index:50;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%);}
+.heat{overflow-x:auto;padding-bottom:4px;}
+.heat-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;width:max-content;}
+.hc{width:11px;height:11px;border-radius:2px;background:var(--surface-2);}
+.hc.l1{background:var(--accent);opacity:.28;}
+.hc.l2{background:var(--accent);opacity:.5;}
+.hc.l3{background:var(--accent);opacity:.74;}
+.hc.l4{background:var(--accent);opacity:1;}
+.mood-line{width:100%;height:auto;display:block;color:var(--accent);}
+.mood-line circle{fill:currentColor;}
+.swph{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:13px;font-weight:600;}
+.swph .done{color:var(--green);display:flex;align-items:center;gap:5px;}
+.swph .del{color:var(--red);}
+.row-wrap{position:relative;overflow:hidden;border-radius:var(--r);}
+.row{position:relative;z-index:1;background:var(--surface);transition:transform .18s ease;}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cal-nav b{font-size:15px;}
+.cal-nav button{background:var(--surface-2);border:1px solid var(--line);color:var(--ink);width:38px;height:38px;border-radius:10px;font-size:18px;cursor:pointer;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-dow{font-size:10px;color:var(--ink-3);text-align:center;padding-bottom:2px;}
+.cd{aspect-ratio:1;border-radius:7px;display:grid;place-items:center;font-size:12px;font-style:normal;background:var(--surface-2);color:var(--ink-3);border:1px solid var(--line);cursor:pointer;}
+.cd.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.cd.tdy{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink-2);}
+.cd.fut{opacity:.4;}
+.cardmgr{display:flex;flex-direction:column;}
+.cm-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+.cm-row:last-child{border-bottom:none;}
+.cm-row .nm{flex:1;font-size:14px;}
+.cm-row .nm.off{color:var(--ink-3);text-decoration:line-through;}
+.cm-row button{background:var(--surface-2);border:1px solid var(--line);color:var(--ink);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;flex:0 0 auto;}
 </style>
 </head>
 <body>
@@ -178,23 +207,27 @@ textarea{min-height:90px;resize:vertical;}
 
 <div class='page active' id='p-dash'>
   <div id='dashReminder'></div>
-  <section><div class='quote'><div class='quote-t' id='quoteText'></div><div class='quote-a' id='quoteAuthor'></div></div></section>
-  <section><div class='hero'><div class='hero-top'><span>Прогресс по целям</span><span class='hero-pct' id='dashPct'>0%</span></div><div class='track'><span id='dashBar'></span></div><div class='hero-sub' id='dashGoalsLine'></div></div></section>
-  <section><div class='stat-grid'>
+  <div id='dashCards'>
+  <section data-card='quote'><div class='quote'><div class='quote-t' id='quoteText'></div><div class='quote-a' id='quoteAuthor'></div></div></section>
+  <section data-card='progress'><div class='hero'><div class='hero-top'><span>Прогресс по целям</span><span class='hero-pct' id='dashPct'>0%</span></div><div class='track'><span id='dashBar'></span></div><div class='hero-sub' id='dashGoalsLine'></div></div></section>
+  <section data-card='stats'><div class='stat-grid'>
     <div class='stat'><div class='sv' id='stStreak'>0</div><div class='sl'>Лучший стрик, дн.</div></div>
     <div class='stat'><div class='sv' id='stHabits'>0/0</div><div class='sl'>Привычки сегодня</div></div>
     <div class='stat'><div class='sv' id='stGoals'>0</div><div class='sl'>Активные цели</div></div>
     <div class='stat'><div class='sv' id='stJournal'>0</div><div class='sl'>Записи за месяц</div></div>
   </div></section>
-  <section><div class='yearw' id='yearCard'><div class='yt'><span id='yearLabel'>Год</span><b id='yearPct'>0%</b></div><div class='track' style='margin-top:12px'><span id='yearBar'></span></div><div class='hero-sub' id='yearSub' style='margin-top:8px'></div></div></section>
-  <section><div class='chart'><h3><span>Привычки · 14 дней</span><span id='habitChartSum'></span></h3><div id='habitChart'></div><div class='chart-cap'>Сколько привычек отмечено каждый день</div></div></section>
-  <section><div class='chart'><h3><span>Цели по категориям</span></h3><div id='catChart'></div></div></section>
-  <section><button class='btn ghost' id='monthlyBtn'>Итоги месяца →</button></section>
-  <section><div class='sec-head'><h2>Ближайшие цели</h2><button class='sec-link' data-go='goals'>Все</button></div><div id='dashGoals' class='list'></div></section>
+  <section data-card='year'><div class='yearw' id='yearCard'><div class='yt'><span id='yearLabel'>Год</span><b id='yearPct'>0%</b></div><div class='track' style='margin-top:12px'><span id='yearBar'></span></div><div class='hero-sub' id='yearSub' style='margin-top:8px'></div></div></section>
+  <section data-card='heatmap'><div class='chart'><h3><span>Активность за год</span><span id='heatSum'></span></h3><div class='heat'><div class='heat-grid' id='heatGrid'></div></div><div class='chart-cap'>Цели, привычки и записи по дням</div></div></section>
+  <section data-card='habitchart'><div class='chart'><h3><span>Привычки · 14 дней</span><span id='habitChartSum'></span></h3><div id='habitChart'></div><div class='chart-cap'>Сколько привычек отмечено каждый день</div></div></section>
+  <section data-card='moodchart'><div class='chart'><h3><span>Настроение · 30 дней</span><span id='moodSum'></span></h3><div id='moodChart'></div><div class='chart-cap'>По записям в дневнике</div></div></section>
+  <section data-card='catchart'><div class='chart'><h3><span>Цели по категориям</span></h3><div id='catChart'></div></div></section>
+  <section data-card='monthly'><button class='btn ghost' id='monthlyBtn'>Итоги месяца →</button></section>
+  <section data-card='goals'><div class='sec-head'><h2>Ближайшие цели</h2><button class='sec-link' data-go='goals'>Все</button></div><div id='dashGoals' class='list'></div></section>
+  </div>
 </div>
 
 <div class='page' id='p-goals'>
-  <div class='seg' id='goalFilter'><button data-f='all' class='on'>Все</button><button data-f='active'>Активные</button><button data-f='done'>Готово</button></div>
+  <div class='seg' id='goalFilter'><button data-f='all' class='on'>Все</button><button data-f='active'>Активные</button><button data-f='done'>Готово</button><button data-f='archive'>Архив</button></div>
   <div class='chips' id='catChips'></div>
   <div id='goalsList' class='list'></div>
 </div>

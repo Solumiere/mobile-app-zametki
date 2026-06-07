@@ -5,6 +5,8 @@ const monthKey=(d=new Date())=>d.toISOString().slice(0,7);
 const MONTHS=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const MONTHS_N=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const DOW=['вс','пн','вт','ср','чт','пт','сб'];
+const DOW2=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const DASH_CARDS=[{id:'quote',name:'Цитата дня'},{id:'progress',name:'Прогресс по целям'},{id:'stats',name:'Статистика'},{id:'year',name:'Прогресс года'},{id:'heatmap',name:'Активность за год'},{id:'habitchart',name:'График привычек'},{id:'moodchart',name:'График настроения'},{id:'catchart',name:'Цели по категориям'},{id:'monthly',name:'Итоги месяца'},{id:'goals',name:'Ближайшие цели'}];
 const MOODS=['😄','🙂','😐','😕','😔'];
 const MOOD_SCORE={'😄':5,'🙂':4,'😐':3,'😕':2,'😔':1};
 const CHECK_SVG='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 6.5"/></svg>';
@@ -44,6 +46,7 @@ let goalFilter='all';
 let catFilter='all';
 let jQ='';
 let expanded=new Set();
+let swSuppress=false;
 
 function load(){
   let s; try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
@@ -52,9 +55,15 @@ function load(){
   s.habits=Array.isArray(s.habits)?s.habits:[];
   s.journal=Array.isArray(s.journal)?s.journal:[];
   s.goals.forEach(g=>{ if(!Array.isArray(g.subtasks)) g.subtasks=[]; });
+  s.habits.forEach(h=>{ if(typeof h.target!=='number') h.target=0; });
   s.name=s.name||'Young';
   s.settings=Object.assign({theme:'dark',accent:'mono',lastReminded:''}, s.settings||{});
   s.settings.reminder=Object.assign({enabled:false,time:'20:00'}, s.settings.reminder||{});
+  const _ids=DASH_CARDS.map(c=>c.id);
+  let _ord=Array.isArray(s.settings.cardOrder)?s.settings.cardOrder.filter(x=>_ids.indexOf(x)>=0):[];
+  _ids.forEach(id=>{ if(_ord.indexOf(id)<0) _ord.push(id); });
+  s.settings.cardOrder=_ord;
+  s.settings.cardHidden=(s.settings.cardHidden&&typeof s.settings.cardHidden==='object')?s.settings.cardHidden:{};
   return s;
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -91,7 +100,7 @@ document.getElementById('yearCard').onclick=yearSheet;
 document.getElementById('jSearch').oninput=e=>{ jQ=e.target.value.trim(); renderJournal(); };
 
 /* ---------- расчёты ---------- */
-function monthStats(){ const g=state.goals; const total=g.length, done=g.filter(x=>x.done).length; return {total,done,pct: total?Math.round(done/total*100):0}; }
+function monthStats(){ const g=state.goals.filter(x=>!x.archived); const total=g.length, done=g.filter(x=>x.done).length; return {total,done,pct: total?Math.round(done/total*100):0}; }
 function habitStreak(h){ let s=0; const d=new Date(); for(;;){ const k=d.toISOString().slice(0,10); if(h.log&&h.log[k]){ s++; d.setDate(d.getDate()-1);} else break; } return s; }
 function bestStreak(){ return state.habits.reduce((m,h)=>Math.max(m,habitStreak(h)),0); }
 function habitsToday(){ const k=todayISO(); return {done: state.habits.filter(h=>h.log&&h.log[k]).length, total: state.habits.length}; }
@@ -109,7 +118,7 @@ function renderHabitChart(){ const days=[]; const d=new Date(); d.setDate(d.getD
   const max=Math.max(1,state.habits.length,...days);
   document.getElementById('habitChart').innerHTML=barChart(days,max);
   document.getElementById('habitChartSum').textContent=days.reduce((a,b)=>a+b,0)+' отметок'; }
-function renderCatChart(){ const map={}; state.goals.forEach(g=>{ const c=(g.category||'').trim()||'Без категории'; (map[c]=map[c]||{t:0,d:0}); map[c].t++; if(g.done) map[c].d++; });
+function renderCatChart(){ const map={}; state.goals.forEach(g=>{ if(g.archived) return; const c=(g.category||'').trim()||'Без категории'; (map[c]=map[c]||{t:0,d:0}); map[c].t++; if(g.done) map[c].d++; });
   const ent=Object.keys(map).map(k=>[k,map[k]]).sort((a,b)=>b[1].t-a[1].t).slice(0,6);
   const el=document.getElementById('catChart');
   if(!ent.length){ el.innerHTML='<div class="empty">Пока нет целей</div>'; return; }
@@ -135,7 +144,7 @@ function goalCard(g){ const pr={high:'p-high',mid:'p-mid',low:'p-low'}[g.priorit
   const meta=bits.length?'<div class="row-meta">'+bits.join(' · ')+'</div>':'';
   const chev=st.length?'<button class="chev '+(expanded.has(g.id)?'open':'')+'" data-expand="'+g.id+'">'+CHEV_SVG+'</button>':'';
   const subs=(st.length&&expanded.has(g.id))?'<div class="subs">'+st.map(s=>'<div class="sub"><button class="scheck '+(s.done?'on':'')+'" data-subtoggle="'+g.id+'|'+s.id+'">'+CHECK_SVG+'</button><span class="'+(s.done?'sd':'')+'">'+esc(s.title)+'</span></div>').join('')+'</div>':'';
-  return '<div class="row-wrap"><div class="row '+(g.done?'is-done':'')+'"><button class="check '+(g.done?'on':'')+'" data-toggle="'+g.id+'">'+CHECK_SVG+'</button><div class="row-main" data-editgoal="'+g.id+'"><div class="row-title"><span class="pdot '+pr+'"></span>'+esc(g.title)+'</div>'+meta+'</div>'+chev+'<button class="row-del" data-delgoal="'+g.id+'">'+X_SVG+'</button></div>'+subs+'</div>'; }
+  return '<div class="row-wrap"><div class="swph"><span class="done">'+CHECK_SVG+' Готово</span><span class="del">Удалить</span></div><div class="row '+(g.done?'is-done':'')+'"><button class="check '+(g.done?'on':'')+'" data-toggle="'+g.id+'">'+CHECK_SVG+'</button><div class="row-main" data-editgoal="'+g.id+'"><div class="row-title"><span class="pdot '+pr+'"></span>'+esc(g.title)+'</div>'+meta+'</div>'+chev+'<button class="row-del" data-delgoal="'+g.id+'">'+X_SVG+'</button></div>'+subs+'</div>'; }
 
 function renderDash(){ const st=monthStats();
   document.getElementById('dashPct').textContent=st.pct+'%';
@@ -143,17 +152,17 @@ function renderDash(){ const st=monthStats();
   document.getElementById('dashGoalsLine').textContent=st.done+' из '+st.total+' выполнено';
   document.getElementById('stStreak').textContent=bestStreak();
   const ht=habitsToday(); document.getElementById('stHabits').textContent=ht.done+'/'+ht.total;
-  document.getElementById('stGoals').textContent=state.goals.filter(g=>!g.done).length;
+  document.getElementById('stGoals').textContent=state.goals.filter(g=>!g.done && !g.archived).length;
   document.getElementById('stJournal').textContent=state.journal.filter(j=>(j.date||'').slice(0,7)===monthKey()).length;
   const q=quoteOfDay(); document.getElementById('quoteText').textContent='«'+q.t+'»';
   document.getElementById('quoteAuthor').textContent=q.a?'— '+q.a:'';
   const y=yearProgress(); document.getElementById('yearLabel').textContent=y.y+' год';
   document.getElementById('yearPct').textContent=y.pct+'%'; document.getElementById('yearBar').style.width=y.pct+'%';
   document.getElementById('yearSub').textContent='День '+y.day+' из '+y.total+' · осталось '+y.left+' дн.';
-  renderHabitChart(); renderCatChart();
+  renderHabitChart(); renderCatChart(); renderMoodChart(); renderHeatmap(); arrangeDashCards();
   const rem=document.getElementById('dashReminder');
   if(state.settings.reminder.enabled && ht.total && ht.done<ht.total){ rem.innerHTML='<div class="banner">Сегодня отмечено '+ht.done+' из '+ht.total+' привычек.<button data-go="habits">Открыть</button></div>'; } else rem.innerHTML='';
-  const up=state.goals.filter(g=>!g.done).slice(0,3);
+  const up=state.goals.filter(g=>!g.done && !g.archived).slice(0,3);
   document.getElementById('dashGoals').innerHTML=up.length?up.map(goalCard).join(''):'<div class="empty">Пока нет активных целей.<br>Нажмите + чтобы добавить первую.</div>'; }
 
 function renderCatChips(){ const cats=[]; state.goals.forEach(g=>{ const c=(g.category||'').trim(); if(c&&cats.indexOf(c)<0) cats.push(c); });
@@ -165,10 +174,13 @@ function renderCatChips(){ const cats=[]; state.goals.forEach(g=>{ const c=(g.ca
 
 function renderGoals(){ renderCatChips();
   let list=state.goals.slice().sort((a,b)=>(a.done-b.done)||(b.created||'').localeCompare(a.created||''));
-  if(goalFilter==='active') list=list.filter(g=>!g.done);
-  if(goalFilter==='done') list=list.filter(g=>g.done);
+  if(goalFilter==='archive'){ list=list.filter(g=>g.archived); }
+  else { list=list.filter(g=>!g.archived);
+    if(goalFilter==='active') list=list.filter(g=>!g.done);
+    if(goalFilter==='done') list=list.filter(g=>g.done); }
   if(catFilter!=='all') list=list.filter(g=>(g.category||'').trim()===catFilter);
-  document.getElementById('goalsList').innerHTML=list.length?list.map(goalCard).join(''):'<div class="empty">Здесь появятся ваши цели.</div>'; }
+  const emptyTxt=goalFilter==='archive'?'В архиве пока пусто.':'Здесь появятся ваши цели.';
+  document.getElementById('goalsList').innerHTML=list.length?list.map(goalCard).join(''):'<div class="empty">'+emptyTxt+'</div>'; }
 
 function renderHabits(){ const wrap=document.getElementById('habitsList');
   if(!state.habits.length){ wrap.innerHTML='<div class="empty">Добавьте привычку и отмечайте её каждый день.</div>'; return; }
@@ -176,7 +188,8 @@ function renderHabits(){ const wrap=document.getElementById('habitsList');
   for(let i=0;i<7;i++){ days.push(new Date(d)); d.setDate(d.getDate()+1); }
   wrap.innerHTML=state.habits.map(h=>{ const cells=days.map(dt=>{ const k=dt.toISOString().slice(0,10); const on=h.log&&h.log[k]; const isT=k===todayISO();
     return '<div class="day '+(on?'on':'')+' '+(isT?'today':'')+'" data-habit="'+h.id+'" data-day="'+k+'"><span class="dn">'+DOW[dt.getDay()]+'</span><span class="dd">'+dt.getDate()+'</span></div>'; }).join('');
-    return '<div class="card"><div class="habit-head"><div class="habit-name" data-edithabit="'+h.id+'">'+esc(h.title)+'</div><div class="habit-right"><span class="streak">'+habitStreak(h)+' дн.</span><button class="row-del" data-delhabit="'+h.id+'">'+X_SVG+'</button></div></div><div class="week">'+cells+'</div></div>'; }).join(''); }
+    const wk=habitWeekCount(h); const tgt=h.target?'<span class="streak" style="color:var(--ink-2)">'+wk+'/'+h.target+' нед</span>':'';
+    return '<div class="card"><div class="habit-head"><div class="habit-name" data-edithabit="'+h.id+'">'+esc(h.title)+'</div><div class="habit-right">'+tgt+'<span class="streak">'+habitStreak(h)+' дн.</span><button class="row-del" data-delhabit="'+h.id+'">'+X_SVG+'</button></div></div><div class="week">'+cells+'</div></div>'; }).join(''); }
 
 function renderJournal(){ let list=state.journal.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(jQ){ const q=jQ.toLowerCase(); list=list.filter(j=>((j.text||'')+' '+(j.good||[]).join(' ')).toLowerCase().indexOf(q)>=0); }
@@ -186,6 +199,7 @@ function renderJournal(){ let list=state.journal.slice().sort((a,b)=>(b.date||''
 
 /* ---------- клики по спискам ---------- */
 document.body.addEventListener('click', e=>{
+  if(swSuppress){ swSuppress=false; return; }
   const goEl=e.target.closest('[data-go]'); if(goEl){ go(goEl.dataset.go); return; }
   const catEl=e.target.closest('[data-cat]'); if(catEl){ catFilter=catEl.dataset.cat; renderGoals(); return; }
   const t=e.target.closest('[data-toggle],[data-delgoal],[data-editgoal],[data-expand],[data-subtoggle],[data-habit],[data-edithabit],[data-delhabit],[data-deljrnl]');
@@ -196,7 +210,7 @@ document.body.addEventListener('click', e=>{
   else if(t.dataset.expand){ const id=t.dataset.expand; expanded.has(id)?expanded.delete(id):expanded.add(id); render(); }
   else if(t.dataset.subtoggle){ const p=t.dataset.subtoggle.split('|'); const g=state.goals.find(x=>x.id===p[0]); const s=g&&g.subtasks.find(x=>x.id===p[1]); if(s){ s.done=!s.done; save(); render(); } }
   else if(t.dataset.habit){ const h=state.habits.find(x=>x.id===t.dataset.habit); const k=t.dataset.day; h.log=h.log||{}; if(h.log[k]) delete h.log[k]; else h.log[k]=true; save(); render(); }
-  else if(t.dataset.edithabit){ const h=state.habits.find(x=>x.id===t.dataset.edithabit); if(h) habitSheet(h); }
+  else if(t.dataset.edithabit){ const h=state.habits.find(x=>x.id===t.dataset.edithabit); if(h) habitDetailSheet(h); }
   else if(t.dataset.delhabit){ if(confirm('Удалить привычку?')){ state.habits=state.habits.filter(x=>x.id!==t.dataset.delhabit); save(); render(); } }
   else if(t.dataset.deljrnl){ state.journal=state.journal.filter(x=>x.id!==t.dataset.deljrnl); save(); render(); }
 });
@@ -216,6 +230,7 @@ function goalSheet(goal){ const g=goal||{}; let subs=(g.subtasks||[]).map(s=>({i
     '<label class="fld"><span class="lt">Период</span><input id="gPer" placeholder="Неделя / месяц / год / без срока" /></label>'+
     '<label class="fld"><span class="lt">Шаги (по желанию)</span><div id="subList"></div><button type="button" class="btn ghost" id="subAdd" style="margin-top:8px">+ Добавить шаг</button></label>'+
     '<button class="btn" id="gSave">'+(goal?'Сохранить':'Добавить цель')+'</button>'+
+    (goal?'<button class="btn ghost" id="gArch">'+(goal.archived?'Вернуть из архива':'В архив')+'</button>':'')+
     (goal?'<button class="btn ghost" id="gDel">Удалить цель</button>':''));
   document.getElementById('gT').value=g.title||'';
   document.getElementById('gC').value=g.category||'';
@@ -234,16 +249,19 @@ function goalSheet(goal){ const g=goal||{}; let subs=(g.subtasks||[]).map(s=>({i
     if(goal){ Object.assign(goal,data); } else { state.goals.push(Object.assign({id:uid(),done:false,created:new Date().toISOString()},data)); }
     save(); closeSheet(); go('goals'); toast(goal?'Сохранено':'Цель добавлена'); };
   if(goal){ document.getElementById('gDel').onclick=()=>{ state.goals=state.goals.filter(x=>x.id!==goal.id); save(); closeSheet(); go('goals'); toast('Удалено'); }; }
+  if(goal){ document.getElementById('gArch').onclick=()=>{ goal.archived=!goal.archived; save(); closeSheet(); go('goals'); toast(goal.archived?'В архиве':'Возвращено из архива'); }; }
 }
 
 function habitSheet(habit){ const h=habit||{};
   openSheet('<h3>'+(habit?'Редактировать привычку':'Новая привычка')+'</h3>'+
     '<label class="fld"><span class="lt">Название</span><input id="hT" placeholder="Например: читать 20 минут" /></label>'+
+    '<label class="fld"><span class="lt">Цель в неделю (0 = без цели)</span><input type="number" id="hTarget" min="0" max="7" /></label>'+
     '<button class="btn" id="hSave">'+(habit?'Сохранить':'Добавить привычку')+'</button>'+
     (habit?'<button class="btn ghost" id="hDel">Удалить привычку</button>':''));
-  document.getElementById('hT').value=h.title||''; document.getElementById('hT').focus();
+  document.getElementById('hT').value=h.title||''; document.getElementById('hTarget').value=h.target||0; document.getElementById('hT').focus();
   document.getElementById('hSave').onclick=()=>{ const title=document.getElementById('hT').value.trim(); if(!title){ toast('Введите название'); return; }
-    if(habit){ habit.title=title; } else { state.habits.push({id:uid(),title:title,log:{}}); }
+    const tg=Math.max(0,Math.min(7,parseInt(document.getElementById('hTarget').value,10)||0));
+    if(habit){ habit.title=title; habit.target=tg; } else { state.habits.push({id:uid(),title:title,target:tg,log:{}}); }
     save(); closeSheet(); go('habits'); toast(habit?'Сохранено':'Привычка добавлена'); };
   if(habit){ document.getElementById('hDel').onclick=()=>{ state.habits=state.habits.filter(x=>x.id!==habit.id); save(); closeSheet(); go('habits'); toast('Удалено'); }; }
 }
@@ -299,6 +317,7 @@ function settingsSheet(){ const s=state.settings;
     '<label class="fld"><span class="lt">Тема</span><div class="seg" id="themeSeg"><button data-t="dark" class="'+(s.theme==='dark'?'on':'')+'">Тёмная</button><button data-t="light" class="'+(s.theme==='light'?'on':'')+'">Светлая</button></div></label>'+
     '<label class="fld"><span class="lt">Акцент</span><div class="swatches" id="swatches">'+Object.keys(ACCENTS).map(k=>'<button data-acc="'+k+'" class="swatch '+(s.accent===k?'on':'')+'" style="background:'+ACCENTS[k][s.theme==='light'?'light':'dark'][0]+'"></button>').join('')+'</div></label>'+
     '<label class="fld"><span class="lt">Ежедневное напоминание</span><div class="rem-row"><label class="switch"><input type="checkbox" id="remOn" '+(s.reminder.enabled?'checked':'')+'/><span></span></label><input type="time" id="remTime" value="'+s.reminder.time+'" /></div><p class="mini" style="text-align:left;margin-top:8px">Срабатывает, пока приложение открыто или висит в фоне. Пуш при полностью закрытом приложении требует сервера.</p></label>'+
+    '<label class="fld"><span class="lt">Карточки на главном</span><div class="cardmgr" id="cardMgr"></div></label>'+
     '<button class="btn ghost" id="sExport">Экспорт данных (резервная копия)</button>'+
     '<button class="btn ghost" id="sImport">Импорт данных</button>'+
     '<input type="file" id="sFile" accept="application/json" style="display:none" />'+
@@ -313,6 +332,11 @@ function settingsSheet(){ const s=state.settings;
     document.querySelectorAll('#swatches .swatch').forEach(x=>x.classList.toggle('on',x.dataset.acc===state.settings.accent)); } };
   document.getElementById('remOn').onchange=function(){ if(this.checked){ if('Notification' in window && Notification.permission!=='granted'){ Notification.requestPermission().then(p=>{ if(p!=='granted') toast('Уведомления не разрешены'); }); } state.settings.reminder.enabled=true; } else state.settings.reminder.enabled=false; save(); };
   document.getElementById('remTime').onchange=function(){ state.settings.reminder.time=this.value||'20:00'; save(); };
+  function drawCards(){ const box=document.getElementById('cardMgr'); box.innerHTML=state.settings.cardOrder.map((id,i)=>{ const c=DASH_CARDS.find(x=>x.id===id)||{name:id}; const hid=!!state.settings.cardHidden[id]; return '<div class="cm-row"><label class="switch"><input type="checkbox" data-cv="'+id+'" '+(hid?'':'checked')+'/><span></span></label><span class="nm '+(hid?'off':'')+'">'+esc(c.name)+'</span><button data-cu="'+i+'">↑</button><button data-cd="'+i+'">↓</button></div>'; }).join('');
+    box.querySelectorAll('[data-cv]').forEach(inp=>inp.onchange=()=>{ const id=inp.dataset.cv; if(inp.checked) delete state.settings.cardHidden[id]; else state.settings.cardHidden[id]=true; save(); drawCards(); render(); });
+    box.querySelectorAll('[data-cu]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.cu; const o=state.settings.cardOrder; if(i>0){ const tmp=o[i-1]; o[i-1]=o[i]; o[i]=tmp; save(); drawCards(); render(); } });
+    box.querySelectorAll('[data-cd]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.cd; const o=state.settings.cardOrder; if(i<o.length-1){ const tmp=o[i+1]; o[i+1]=o[i]; o[i]=tmp; save(); drawCards(); render(); } }); }
+  drawCards();
   document.getElementById('sExport').onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='moi-celi-backup-'+todayISO()+'.json'; a.click(); toast('Файл скачан'); };
   document.getElementById('sImport').onclick=()=>document.getElementById('sFile').click();
   document.getElementById('sFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); state.goals=d.goals||[]; state.habits=d.habits||[]; state.journal=d.journal||[]; state.name=d.name||'Young'; if(d.settings) state.settings=Object.assign(state.settings,d.settings); state.goals.forEach(g=>{ if(!Array.isArray(g.subtasks)) g.subtasks=[]; }); save(); closeSheet(); applyAppearance(); render(); toast('Данные восстановлены'); }catch(err){ toast('Ошибка файла'); } }; r.readAsText(f); };
@@ -331,5 +355,4 @@ setInterval(checkReminder, 30000);
 let tT; function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>el.classList.remove('show'),1800); }
 
 /* ---------- старт ---------- */
-applyAppearance(); render(); checkReminder();
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+applyAppearance(); render(); check
