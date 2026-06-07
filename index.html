@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0e1016" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Мои Цели" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<title>Мои Цели</title>
+<style>
+  :root{
+    --bg:#0e1016; --bg2:#161a24; --card:#1b202c; --card2:#222838;
+    --line:#2b3242; --txt:#eef1f7; --muted:#8b93a7; --muted2:#5d6479;
+    --accent:#7c6cff; --accent2:#9b8bff; --green:#34d399; --orange:#fbbf24;
+    --red:#fb7185; --blue:#60a5fa; --pink:#f472b6;
+    --radius:18px; --shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--txt);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:calc(84px + env(safe-area-inset-bottom));
+    min-height:100vh;
+  }
+  .app{max-width:520px;margin:0 auto;padding:0 16px;}
+  header.top{padding:calc(18px + env(safe-area-inset-top)) 0 8px;}
+  .hello{font-size:13px;color:var(--muted);letter-spacing:.3px;}
+  .hello b{color:var(--accent2);}
+  .ttl{font-size:26px;font-weight:800;margin:2px 0 0;letter-spacing:-.5px;}
+  .month-pill{display:inline-flex;align-items:center;gap:6px;margin-top:10px;
+    background:var(--card);border:1px solid var(--line);color:var(--muted);
+    padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;}
+
+  .page{display:none;animation:fade .25s ease;}
+  .page.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  section{margin-top:18px;}
+  .sec-h{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;}
+  .sec-h h2{font-size:15px;font-weight:700;margin:0;letter-spacing:.2px;}
+  .sec-h .link{font-size:13px;color:var(--accent2);font-weight:600;}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;position:relative;overflow:hidden;}
+  .stat .lbl{font-size:12px;color:var(--muted);font-weight:600;}
+  .stat .val{font-size:30px;font-weight:800;margin-top:6px;letter-spacing:-1px;}
+  .stat .sub{font-size:11px;color:var(--muted2);margin-top:2px;}
+  .stat .ic{position:absolute;top:14px;right:14px;font-size:18px;opacity:.85;}
+  .big-card{background:linear-gradient(135deg,#5b4bdb,#7c6cff 55%,#9b8bff);
+    border-radius:var(--radius);padding:18px;color:#fff;box-shadow:var(--shadow);}
+  .big-card .t{font-size:13px;opacity:.9;font-weight:600;}
+  .big-card .n{font-size:34px;font-weight:800;margin:4px 0 8px;letter-spacing:-1px;}
+  .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;}
+  .bar > i{display:block;height:100%;background:#fff;border-radius:99px;transition:width .5s;}
+
+  .item{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
+  .chk{width:24px;height:24px;border-radius:8px;border:2px solid var(--muted2);
+    flex:0 0 auto;display:grid;place-items:center;cursor:pointer;margin-top:1px;
+    transition:.15s;font-size:14px;color:transparent;}
+  .chk.on{background:var(--green);border-color:var(--green);color:#06281c;}
+  .item .body{flex:1;min-width:0;}
+  .item .nm{font-size:15px;font-weight:600;line-height:1.3;}
+  .item.done .nm{text-decoration:line-through;color:var(--muted);}
+  .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;
+    background:var(--card2);color:var(--muted);}
+  .tag.p-high{background:rgba(251,113,133,.16);color:#fb7185;}
+  .tag.p-mid{background:rgba(251,191,36,.16);color:#fbbf24;}
+  .tag.p-low{background:rgba(96,165,250,.16);color:#60a5fa;}
+  .tag.cat{background:rgba(124,108,255,.16);color:var(--accent2);}
+  .tag.date{background:transparent;border:1px solid var(--line);}
+  .del{color:var(--muted2);font-size:18px;padding:2px 4px;cursor:pointer;line-height:1;}
+  .empty{text-align:center;color:var(--muted2);font-size:14px;padding:34px 10px;
+    border:1px dashed var(--line);border-radius:16px;}
+  .empty .e{font-size:34px;display:block;margin-bottom:8px;}
+
+  .habit{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px;margin-bottom:10px;}
+  .habit .hh{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .habit .nm{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .streak{font-size:12px;font-weight:700;color:var(--orange);}
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:12px;}
+  .day{aspect-ratio:1;border-radius:10px;background:var(--card2);border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;transition:.15s;}
+  .day .dn{font-size:9px;color:var(--muted2);font-weight:700;text-transform:uppercase;}
+  .day .dd{font-size:13px;font-weight:700;margin-top:1px;}
+  .day.on{background:var(--green);border-color:var(--green);color:#06281c;}
+  .day.on .dn{color:#06281c;opacity:.7;}
+  .day.today{box-shadow:0 0 0 2px var(--accent);}
+
+  .jrnl{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:10px;}
+  .jrnl .jd{display:flex;align-items:center;justify-content:space-between;}
+  .jrnl .jdate{font-size:12px;color:var(--muted);font-weight:600;}
+  .jrnl .mood{font-size:22px;}
+  .jrnl .good{margin-top:10px;}
+  .jrnl .good .gl{font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+  .jrnl .good ul{margin:5px 0 0;padding-left:18px;}
+  .jrnl .good li{font-size:14px;margin:2px 0;}
+  .jrnl .refl{font-size:14px;color:var(--txt);margin-top:10px;line-height:1.45;white-space:pre-wrap;}
+
+  .fab{position:fixed;right:max(18px,calc(50% - 260px + 18px));
+    bottom:calc(96px + env(safe-area-inset-bottom));
+    width:56px;height:56px;border-radius:50%;border:none;
+    background:linear-gradient(135deg,#7c6cff,#9b8bff);color:#fff;
+    font-size:30px;font-weight:300;box-shadow:0 8px 24px rgba(124,108,255,.5);
+    cursor:pointer;z-index:40;display:grid;place-items:center;line-height:0;}
+  .fab:active{transform:scale(.92);}
+
+  nav.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;
+    background:rgba(14,16,22,.92);backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);
+    padding:8px 0 calc(8px + env(safe-area-inset-bottom));}
+  .tabbar-in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);}
+  .tab{background:none;border:none;color:var(--muted2);display:flex;flex-direction:column;
+    align-items:center;gap:3px;cursor:pointer;padding:6px 0;font-family:inherit;}
+  .tab .ti{font-size:21px;}
+  .tab .tl{font-size:10px;font-weight:600;}
+  .tab.active{color:var(--accent2);}
+
+  .overlay{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);
+    display:none;align-items:flex-end;justify-content:center;}
+  .overlay.show{display:flex;}
+  .sheet{background:var(--bg2);width:100%;max-width:520px;
+    border-radius:22px 22px 0 0;border:1px solid var(--line);border-bottom:none;
+    padding:18px 18px calc(22px + env(safe-area-inset-bottom));
+    animation:up .28s cubic-bezier(.2,.8,.2,1);max-height:92vh;overflow-y:auto;}
+  @keyframes up{from{transform:translateY(100%);}to{transform:none;}}
+  .grab{width:40px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 14px;}
+  .sheet h3{margin:0 0 14px;font-size:18px;font-weight:800;}
+  label.fld{display:block;margin-bottom:12px;}
+  label.fld .lt{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;}
+  input,select,textarea{width:100%;background:var(--card);border:1px solid var(--line);
+    color:var(--txt);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;outline:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  textarea{resize:vertical;min-height:70px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .mood-pick{display:flex;gap:8px;justify-content:space-between;}
+  .mood-pick button{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    font-size:24px;padding:9px 0;cursor:pointer;}
+  .mood-pick button.on{border-color:var(--accent);background:var(--card2);transform:scale(1.05);}
+  .btn{width:100%;background:linear-gradient(135deg,#7c6cff,#9b8bff);color:#fff;border:none;
+    border-radius:14px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;
+    font-family:inherit;margin-top:4px;}
+  .btn:active{opacity:.85;}
+  .btn.ghost{background:var(--card);border:1px solid var(--line);color:var(--muted);margin-top:10px;}
+  .seg{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:4px;margin-bottom:14px;}
+  .seg button{flex:1;background:none;border:none;color:var(--muted);font-weight:600;
+    font-size:13px;padding:8px;border-radius:9px;cursor:pointer;font-family:inherit;}
+  .seg button.on{background:var(--accent);color:#fff;}
+  .toast{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom));left:50%;
+    transform:translateX(-50%);background:var(--card2);border:1px solid var(--line);
+    color:var(--txt);padding:11px 18px;border-radius:99px;font-size:14px;font-weight:600;
+    z-index:80;opacity:0;pointer-events:none;transition:.3s;box-shadow:var(--shadow);}
+  .toast.show{opacity:1;}
+  .mini{font-size:12px;color:var(--muted2);text-align:center;margin-top:8px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="hello">Привет, <b id="uname">Young</b> 👋</div>
+    <div class="ttl" id="pageTitle">Дашборд</div>
+    <div class="month-pill" id="monthPill">📅 Месяц</div>
+  </header>
+
+  <div class="page active" id="p-dash">
+    <section>
+      <div class="big-card">
+        <div class="t">Прогресс целей за месяц</div>
+        <div class="n"><span id="dashPct">0%</span></div>
+        <div class="bar"><i id="dashBar" style="width:0%"></i></div>
+        <div style="font-size:12px;opacity:.9;margin-top:8px" id="dashGoalsLine">0 из 0 целей выполнено</div>
+      </div>
+    </section>
+    <section>
+      <div class="stats">
+        <div class="stat"><span class="ic">🔥</span><div class="lbl">Лучший стрик</div><div class="val" id="stStreak">0</div><div class="sub">дней подряд по привычкам</div></div>
+        <div class="stat"><span class="ic">✅</span><div class="lbl">Привычки сегодня</div><div class="val" id="stHabits">0/0</div><div class="sub">выполнено</div></div>
+        <div class="stat"><span class="ic">🎯</span><div class="lbl">Активные цели</div><div class="val" id="stGoals">0</div><div class="sub">в работе</div></div>
+        <div class="stat"><span class="ic">📝</span><div class="lbl">Записи в дневнике</div><div class="val" id="stJournal">0</div><div class="sub">в этом месяце</div></div>
+      </div>
+    </section>
+    <section>
+      <div class="sec-h"><h2>Ближайшие цели</h2><span class="link" data-go="goals">Все →</span></div>
+      <div id="dashGoals"></div>
+    </section>
+  </div>
+
+  <div class="page" id="p-goals">
+    <div class="seg" id="goalFilter">
+      <button class="on" data-f="all">Все</button>
+      <button data-f="active">Активные</button>
+      <button data-f="done">Выполненные</button>
+    </div>
+    <div id="goalsList"></div>
+  </div>
+
+  <div class="page" id="p-habits">
+    <div id="habitsList"></div>
+  </div>
+
+  <div class="page" id="p-journal">
+    <div id="journalList"></div>
+  </div>
+</div>
+
+<button class="fab" id="fab">+</button>
+
+<nav class="tabbar">
+  <div class="tabbar-in">
+    <button class="tab active" data-tab="dash"><span class="ti">🏠</span><span class="tl">Главная</span></button>
+    <button class="tab" data-tab="goals"><span class="ti">🎯</span><span class="tl">Цели</span></button>
+    <button class="tab" data-tab="habits"><span class="ti">🔁</span><span class="tl">Привычки</span></button>
+    <button class="tab" data-tab="journal"><span class="ti">📓</span><span class="tl">Дневник</span></button>
+  </div>
+</nav>
+
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
