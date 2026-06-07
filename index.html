@@ -197,6 +197,12 @@ textarea{min-height:90px;resize:vertical;}
 .cm-row .nm{flex:1;font-size:14px;}
 .cm-row .nm.off{color:var(--ink-3);text-decoration:line-through;}
 .cm-row button{background:var(--surface-2);border:1px solid var(--line);color:var(--ink);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;flex:0 0 auto;}
+.ach-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ach{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:14px 6px;text-align:center;cursor:pointer;opacity:.4;filter:grayscale(1);transition:.15s;}
+.ach.on{opacity:1;filter:none;border-color:var(--line-strong);}
+.ach-ic{font-size:25px;line-height:1;margin-bottom:7px;}
+.ach-t{font-size:10.5px;color:var(--ink-2);line-height:1.2;}
+.axis{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--ink-3);}
 </style>
 </head>
 <body>
@@ -221,6 +227,7 @@ textarea{min-height:90px;resize:vertical;}
   <section data-card='habitchart'><div class='chart'><h3><span>Привычки · 14 дней</span><span id='habitChartSum'></span></h3><div id='habitChart'></div><div class='chart-cap'>Сколько привычек отмечено каждый день</div></div></section>
   <section data-card='moodchart'><div class='chart'><h3><span>Настроение · 30 дней</span><span id='moodSum'></span></h3><div id='moodChart'></div><div class='chart-cap'>По записям в дневнике</div></div></section>
   <section data-card='catchart'><div class='chart'><h3><span>Цели по категориям</span></h3><div id='catChart'></div></div></section>
+  <section data-card='achievements'><div class='chart'><h3><span>Достижения</span><span id='achSum'></span></h3><div class='ach-grid' id='achGrid'></div></div></section>
   <section data-card='monthly'><button class='btn ghost' id='monthlyBtn'>Итоги месяца →</button></section>
   <section data-card='goals'><div class='sec-head'><h2>Ближайшие цели</h2><button class='sec-link' data-go='goals'>Все</button></div><div id='dashGoals' class='list'></div></section>
   </div>
@@ -241,6 +248,10 @@ textarea{min-height:90px;resize:vertical;}
   <div id='journalList' class='list'></div>
 </div>
 
+<div class='page' id='p-analytics'>
+  <div id='analyticsBody'></div>
+</div>
+
 <button class='fab' id='fab'>+</button>
 
 <div class='tabbar'>
@@ -248,11 +259,13 @@ textarea{min-height:90px;resize:vertical;}
   <button class='tab' data-tab='goals'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M8 12l3 3 5-6'/></svg><span>Цели</span></button>
   <button class='tab' data-tab='habits'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4.5' width='18' height='16' rx='2'/><path d='M3 9h18M8 3v3M16 3v3'/></svg><span>Привычки</span></button>
   <button class='tab' data-tab='journal'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M5 4a2 2 0 0 1 2-2h13v16H7a2 2 0 0 0-2 2V4z'/><path d='M5 20a2 2 0 0 1 2-2h13'/></svg><span>Дневник</span></button>
+  <button class='tab' data-tab='analytics'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20V10M10 20V4M16 20v-7M20 20H3'/></svg><span>Аналитика</span></button>
 </div>
 
 <div class='overlay' id='overlay'><div class='sheet' id='sheet'></div></div>
 <div class='toast' id='toast'></div>
 
 <script src='app.js'></script>
+<script src='features.js'></script>
 </body>
 </html>
