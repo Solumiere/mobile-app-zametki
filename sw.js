@@ -1,5 +1,5 @@
 /* Service Worker — кэширование для офлайн-работы */
-const CACHE='moicely-v2';
+const CACHE='moicely-v3';
 const ASSETS=['.','index.html','app.js','manifest.webmanifest','icon.svg'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
