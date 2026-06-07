@@ -84,9 +84,23 @@ section{margin-bottom:16px;}
 .quote{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;}
 .quote-t{font-size:14.5px;line-height:1.55;font-style:italic;}
 .quote-a{font-size:12px;color:var(--ink-3);margin-top:8px;}
-.yearw{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;}
+.yearw{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;cursor:pointer;transition:border-color .15s;}
+.yearw:active{border-color:var(--line-strong);}
 .yearw .yt{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink-2);}
 .yearw .yt b{color:var(--ink);font-size:17px;font-weight:680;}
+.yslead{display:flex;align-items:baseline;gap:10px;margin:-4px 0 18px;flex-wrap:wrap;}
+.yslead b{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1;}
+.yslead span{font-size:13px;color:var(--ink-3);}
+.ymonths{display:flex;flex-direction:column;gap:16px;}
+.ym-h{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+.ym-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.yd{aspect-ratio:1;border-radius:6px;display:grid;place-items:center;font-size:11px;font-style:normal;}
+.yd.past{background:var(--accent);color:var(--accent-ink);}
+.yd.cur{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink);}
+.yd.fut{background:var(--surface-2);color:var(--ink-3);border:1px solid var(--line);}
+.yleg{display:flex;gap:16px;justify-content:center;margin:20px 0 4px;font-size:12px;color:var(--ink-3);flex-wrap:wrap;}
+.yleg span{display:flex;align-items:center;gap:6px;}
+.yleg .yd{width:14px;height:14px;aspect-ratio:auto;}
 .chart{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;}
 .chart h3{font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:14px;display:flex;justify-content:space-between;}
 .chart h3 span:last-child{color:var(--ink-3);font-weight:500;}
@@ -172,7 +186,7 @@ textarea{min-height:90px;resize:vertical;}
     <div class='stat'><div class='sv' id='stGoals'>0</div><div class='sl'>Активные цели</div></div>
     <div class='stat'><div class='sv' id='stJournal'>0</div><div class='sl'>Записи за месяц</div></div>
   </div></section>
-  <section><div class='yearw'><div class='yt'><span id='yearLabel'>Год</span><b id='yearPct'>0%</b></div><div class='track' style='margin-top:12px'><span id='yearBar'></span></div><div class='hero-sub' id='yearSub' style='margin-top:8px'></div></div></section>
+  <section><div class='yearw' id='yearCard'><div class='yt'><span id='yearLabel'>Год</span><b id='yearPct'>0%</b></div><div class='track' style='margin-top:12px'><span id='yearBar'></span></div><div class='hero-sub' id='yearSub' style='margin-top:8px'></div></div></section>
   <section><div class='chart'><h3><span>Привычки · 14 дней</span><span id='habitChartSum'></span></h3><div id='habitChart'></div><div class='chart-cap'>Сколько привычек отмечено каждый день</div></div></section>
   <section><div class='chart'><h3><span>Цели по категориям</span></h3><div id='catChart'></div></div></section>
   <section><button class='btn ghost' id='monthlyBtn'>Итоги месяца →</button></section>

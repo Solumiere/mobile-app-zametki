@@ -87,6 +87,7 @@ document.getElementById('goalFilter').onclick=e=>{ if(e.target.dataset.f){ goalF
   document.querySelectorAll('#goalFilter button').forEach(b=>b.classList.toggle('on',b.dataset.f===goalFilter)); renderGoals(); } };
 document.getElementById('avatar').onclick=settingsSheet;
 document.getElementById('monthlyBtn').onclick=monthlySheet;
+document.getElementById('yearCard').onclick=yearSheet;
 document.getElementById('jSearch').oninput=e=>{ jQ=e.target.value.trim(); renderJournal(); };
 
 /* ---------- расчёты ---------- */
@@ -275,6 +276,21 @@ function monthlySheet(){ const mk=monthKey(); const mName=MONTHS_N[new Date().ge
     '<div class="msum">'+row('Целей выполнено за месяц',gDone)+row('Активных целей сейчас',gActive)+row('Лучший стрик привычек',bestStreak()+' дн.')+row('Отметок привычек за месяц',hMarks)+row('Записей в дневнике',js.length)+row('Среднее настроение',avgEmoji)+'</div>'+
     '<div class="callout-note">'+note+'</div>'+
     '<button class="btn ghost" onclick="closeSheet()">Закрыть</button>');
+}
+
+function yearSheet(){ const now=new Date(); const y=now.getFullYear(); const yp=yearProgress();
+  const a=new Date(y,0,1); const todayIdx=Math.floor((now-a)/86400000);
+  let body='';
+  for(let m=0;m<12;m++){ const dim=new Date(y,m+1,0).getDate(); let cells='';
+    for(let d=1;d<=dim;d++){ const idx=Math.floor((new Date(y,m,d)-a)/86400000);
+      const cls=idx<todayIdx?'past':(idx===todayIdx?'cur':'fut');
+      cells+='<i class="yd '+cls+'">'+d+'</i>'; }
+    body+='<div class="ym"><div class="ym-h">'+MONTHS_N[m]+'</div><div class="ym-grid">'+cells+'</div></div>'; }
+  openSheet('<h3>'+y+' год</h3>'+
+    '<div class="yslead"><b>'+yp.pct+'%</b><span>День '+yp.day+' из '+yp.total+' · осталось '+yp.left+' дн.</span></div>'+
+    '<div class="ymonths">'+body+'</div>'+
+    '<div class="yleg"><span><i class="yd past"></i> прошёл</span><span><i class="yd cur"></i> сегодня</span><span><i class="yd fut"></i> впереди</span></div>'+
+    '<button class="btn" onclick="closeSheet()">Закрыть</button>');
 }
 
 function settingsSheet(){ const s=state.settings;
