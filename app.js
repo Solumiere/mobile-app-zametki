@@ -355,4 +355,66 @@ setInterval(checkReminder, 30000);
 let tT; function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>el.classList.remove('show'),1800); }
 
 /* ---------- старт ---------- */
-applyAppearance(); render(); check
+applyAppearance(); render(); checkReminder();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+
+/* ---------- доп. виджеты ---------- */
+function arrangeDashCards(){ const box=document.getElementById('dashCards'); if(!box) return;
+  const map={}; box.querySelectorAll('section[data-card]').forEach(s=>{ map[s.dataset.card]=s; });
+  state.settings.cardOrder.forEach(id=>{ const el=map[id]; if(el){ el.style.display=state.settings.cardHidden[id]?'none':''; box.appendChild(el); } }); }
+
+function activityCount(k){ let n=0; state.habits.forEach(h=>{ if(h.log&&h.log[k]) n++; }); n+=state.goals.filter(g=>(g.doneAt||'').slice(0,10)===k).length; n+=state.journal.filter(j=>(j.date||'')===k).length; return n; }
+function renderHeatmap(){ const el=document.getElementById('heatGrid'); if(!el) return;
+  const now=new Date(); const end=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const start=new Date(end); start.setDate(start.getDate()-363);
+  const dow=(start.getDay()+6)%7; start.setDate(start.getDate()-dow);
+  let html=''; let total=0; const d=new Date(start);
+  while(d<=end){ const k=d.toISOString().slice(0,10); const c=activityCount(k); total+=c; const lvl=c===0?0:(c>=4?4:c);
+    html+='<div class="hc l'+lvl+'" title="'+k+': '+c+'"></div>'; d.setDate(d.getDate()+1); }
+  el.innerHTML=html; const sum=document.getElementById('heatSum'); if(sum) sum.textContent=total+' действий'; }
+
+function renderMoodChart(){ const el=document.getElementById('moodChart'); if(!el) return;
+  const days=[]; const d=new Date(); d.setDate(d.getDate()-29);
+  for(let i=0;i<30;i++){ const k=d.toISOString().slice(0,10); const es=state.journal.filter(j=>(j.date||'')===k).map(j=>MOOD_SCORE[j.mood]).filter(Boolean);
+    days.push(es.length?es.reduce((a,b)=>a+b,0)/es.length:null); d.setDate(d.getDate()+1); }
+  const pts=days.map((v,i)=>({i:i,v:v})).filter(p=>p.v!=null); const sum=document.getElementById('moodSum');
+  if(!pts.length){ el.innerHTML='<div class="empty">Пока нет записей с настроением</div>'; if(sum) sum.textContent=''; return; }
+  const W=300,H=70,pad=8,n=30; const X=i=>pad+(W-2*pad)*(i/(n-1)); const Y=v=>H-pad-((v-1)/4)*(H-2*pad);
+  const line=pts.map((p,idx)=>(idx?'L':'M')+X(p.i).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+  const dots=pts.map(p=>'<circle cx="'+X(p.i).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="2.6"/>').join('');
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" class="mood-line"><path d="'+line+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+dots+'</svg>';
+  const avg=pts.reduce((a,p)=>a+p.v,0)/pts.length; const em=MOODS[Math.min(4,Math.max(0,5-Math.round(avg)))]; if(sum) sum.textContent='в среднем '+em; }
+
+function weekStart(d){ const x=new Date(d); const dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); x.setHours(0,0,0,0); return x; }
+function habitWeekCount(h){ const ws=weekStart(new Date()); let n=0; for(let i=0;i<7;i++){ const dd=new Date(ws); dd.setDate(ws.getDate()+i); const k=dd.toISOString().slice(0,10); if(h.log&&h.log[k]) n++; } return n; }
+
+function habitDetailSheet(h){ let m=new Date().getMonth(), y=new Date().getFullYear();
+  function open(){ const dim=new Date(y,m+1,0).getDate(); const first=(new Date(y,m,1).getDay()+6)%7; const tISO=todayISO();
+    let cells=DOW2.map(x=>'<div class="cal-dow">'+x+'</div>').join('');
+    for(let i=0;i<first;i++) cells+='<div></div>';
+    for(let dd=1;dd<=dim;dd++){ const k=new Date(y,m,dd).toISOString().slice(0,10); const on=h.log&&h.log[k]; const isT=k===tISO; const fut=k>tISO;
+      cells+='<i class="cd '+(on?'on':'')+(isT?' tdy':'')+(fut?' fut':'')+'" data-hcal="'+k+'">'+dd+'</i>'; }
+    const total=Object.keys(h.log||{}).length; const wk=habitWeekCount(h);
+    openSheet('<h3>'+esc(h.title)+'</h3>'+
+      '<div class="cal-nav"><button data-cm="-1">‹</button><b>'+MONTHS_N[m]+' '+y+'</b><button data-cm="1">›</button></div>'+
+      '<div class="cal-grid">'+cells+'</div>'+
+      '<div class="msum" style="margin-top:18px"><div class="mrow"><span>Текущий стрик</span><b>'+habitStreak(h)+' дн.</b></div><div class="mrow"><span>Всего отметок</span><b>'+total+'</b></div>'+(h.target?'<div class="mrow"><span>Цель в неделю</span><b>'+wk+'/'+h.target+'</b></div>':'')+'</div>'+
+      '<button class="btn" id="hEdit">Редактировать</button>'+
+      '<button class="btn ghost" onclick="closeSheet()">Закрыть</button>');
+    sheet.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{ m+=parseInt(b.dataset.cm,10); if(m<0){m=11;y--;} if(m>11){m=0;y++;} open(); });
+    sheet.querySelectorAll('[data-hcal]').forEach(c=>c.onclick=()=>{ const k=c.dataset.hcal; if(k>todayISO()) return; h.log=h.log||{}; if(h.log[k]) delete h.log[k]; else h.log[k]=true; save(); render(); open(); });
+    document.getElementById('hEdit').onclick=()=>habitSheet(h); }
+  open(); }
+
+/* ---------- свайп по целям ---------- */
+(function(){ let el=null,sx=0,sy=0,dir=0;
+  document.body.addEventListener('touchstart',e=>{ const r=e.target.closest?e.target.closest('.row'):null; if(!r||(e.target.closest&&e.target.closest('.check,.row-del,.chev'))){ el=null; return; } el=r; sx=e.touches[0].clientX; sy=e.touches[0].clientY; dir=0; },{passive:true});
+  document.body.addEventListener('touchmove',e=>{ if(!el) return; const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+    if(dir===0){ if(Math.abs(dx)>8||Math.abs(dy)>8) dir=Math.abs(dx)>Math.abs(dy)?1:-1; }
+    if(dir===1){ const c=Math.max(-120,Math.min(120,dx)); el.style.transform='translateX('+c+'px)'; } },{passive:true});
+  document.body.addEventListener('touchend',e=>{ if(!el) return; const node=el; el=null; if(dir!==1){ node.style.transform=''; return; } const dx=e.changedTouches[0].clientX-sx; node.style.transform=''; if(Math.abs(dx)>8){ swSuppress=true; setTimeout(()=>{swSuppress=false;},500); }
+    const tg=node.querySelector('[data-toggle]'); const id=tg&&tg.dataset.toggle; if(!id) return; const g=state.goals.find(x=>x.id===id); if(!g) return;
+    if(dx<=-80){ state.goals=state.goals.filter(x=>x.id!==id); save(); toast('Цель удалена'); render(); }
+    else if(dx>=80){ g.done=!g.done; g.doneAt=g.done?new Date().toISOString():null; save(); toast(g.done?'Выполнено':'Возвращено'); render(); } },{passive:true});
+})();
